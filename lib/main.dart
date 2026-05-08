@@ -48,18 +48,16 @@ class Ilac {
   String id;
   String isim;
   bool sabahAlindi;
-  bool ogleAlindi;   // ✅ YENİ
+  bool ogleAlindi;
   bool aksamAlindi;
   TimeOfDay? sabahSaati;
-  TimeOfDay? ogleSaati;   // ✅ YENİ
+  TimeOfDay? ogleSaati;
   TimeOfDay? aksamSaati;
   bool sabahAlarmAktif;
-  bool ogleAlarmAktif;   // ✅ YENİ
+  bool ogleAlarmAktif;
   bool aksamAlarmAktif;
   String tarih;
-
-  // ✅ YENİ: Haftada bir için gün seçimi
-  String? haftaGunu; // null ise her gün, değer varsa o gün (örn: 'Pazartesi')
+  String? haftaGunu;
 
   Ilac({
     required this.id,
@@ -135,12 +133,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
   List<Ilac> ilaclar = [];
   int _selectedIndex = 0;
   late String bugunTarih;
-
-  // ✅ YENİ: Türkçe gün listesi
-  final List<String> _gunler = [
-    'Pazartesi', 'Salı', 'Çarşamba',
-    'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'
-  ];
 
   @override
   void initState() {
@@ -225,7 +217,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
     await prefs.setString('ilac_isimleri', isimlerJson);
   }
 
-  // ✅ GÜNCELLENDİ: İlaç ekleme dialogu — Öğle + Haftada 1 gün seçimi eklendi
   void _ilacEkle() {
     String yeniIsim = '';
     bool sabahSecili = true;
@@ -233,6 +224,10 @@ class _AnaSayfaState extends State<AnaSayfa> {
     bool aksamSecili = true;
     bool haftadaBirSecili = false;
     String secilenGun = 'Pazartesi';
+
+    // ✅ Haftalık ilaç için saat — dialog içinde seçilecek
+    TimeOfDay haftaIlacSaati = const TimeOfDay(hour: 8, minute: 0);
+    bool haftaAlarmAktif = false;
 
     showDialog(
       context: context,
@@ -303,7 +298,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
                     CheckboxListTile(
                       title: const Row(
                         children: [
-                          Icon(Icons.nights_stay, color: Colors.indigo, size: 20),
+                          Icon(Icons.nights_stay,
+                              color: Colors.indigo, size: 20),
                           SizedBox(width: 8),
                           Text('Akşam'),
                         ],
@@ -318,11 +314,12 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
                     const Divider(),
 
-                    // Haftada bir seçeneği
+                    // Haftada bir checkbox
                     CheckboxListTile(
                       title: const Row(
                         children: [
-                          Icon(Icons.calendar_today, color: Colors.teal, size: 20),
+                          Icon(Icons.calendar_today,
+                              color: Colors.teal, size: 20),
                           SizedBox(width: 8),
                           Text('Haftada Bir'),
                         ],
@@ -331,7 +328,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       onChanged: (v) => setDialogState(() {
                         haftadaBirSecili = v!;
                         if (haftadaBirSecili) {
-                          // Haftada bir seçilince diğerlerini sıfırla
                           sabahSecili = false;
                           ogleSecili = false;
                           aksamSecili = false;
@@ -341,9 +337,11 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       dense: true,
                     ),
 
-                    // Haftada bir seçiliyse gün dropdown'u göster
+                    // ✅ Haftada bir seçiliyse: gün + saat + alarm
                     if (haftadaBirSecili) ...[
                       const SizedBox(height: 8),
+
+                      // Gün seçimi
                       DropdownButtonFormField<String>(
                         value: secilenGun,
                         decoration: const InputDecoration(
@@ -352,14 +350,77 @@ class _AnaSayfaState extends State<AnaSayfa> {
                           prefixIcon: Icon(Icons.event),
                         ),
                         items: [
-                          'Pazartesi', 'Salı', 'Çarşamba',
-                          'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'
+                          'Pazartesi',
+                          'Salı',
+                          'Çarşamba',
+                          'Perşembe',
+                          'Cuma',
+                          'Cumartesi',
+                          'Pazar',
                         ]
                             .map((g) =>
                                 DropdownMenuItem(value: g, child: Text(g)))
                             .toList(),
                         onChanged: (v) =>
                             setDialogState(() => secilenGun = v!),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ✅ Saat seçimi
+                      ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        leading: const Icon(Icons.access_time,
+                            color: Colors.teal),
+                        title: const Text('Hatırlatma Saati'),
+                        subtitle: Text(
+                          '${haftaIlacSaati.hour.toString().padLeft(2, '0')}:${haftaIlacSaati.minute.toString().padLeft(2, '0')}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () async {
+                          final secilen = await showTimePicker(
+                            context: context,
+                            initialTime: haftaIlacSaati,
+                            helpText: 'Haftalık İlaç Saati',
+                          );
+                          if (secilen != null) {
+                            setDialogState(
+                                () => haftaIlacSaati = secilen);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ✅ Alarm açık/kapalı toggle
+                      SwitchListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        secondary: Icon(
+                          haftaAlarmAktif
+                              ? Icons.alarm_on
+                              : Icons.alarm_off,
+                          color:
+                              haftaAlarmAktif ? Colors.teal : Colors.grey,
+                        ),
+                        title: const Text('Alarm Kur'),
+                        subtitle: Text(
+                          haftaAlarmAktif
+                              ? 'Alarm açık — ${secilenGun} günü hatırlatılacak'
+                              : 'Alarm kapalı',
+                        ),
+                        value: haftaAlarmAktif,
+                        activeColor: Colors.teal,
+                        onChanged: (v) =>
+                            setDialogState(() => haftaAlarmAktif = v),
                       ),
                     ],
                   ],
@@ -372,7 +433,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    // En az bir seçenek seçili olmalı
                     if (yeniIsim.trim().isEmpty) return;
                     if (!haftadaBirSecili &&
                         !sabahSecili &&
@@ -380,30 +440,36 @@ class _AnaSayfaState extends State<AnaSayfa> {
                         !aksamSecili) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Lütfen en az bir kullanım zamanı seçin!'),
+                          content: Text(
+                              'Lütfen en az bir kullanım zamanı seçin!'),
                           backgroundColor: Colors.red,
                         ),
                       );
                       return;
                     }
 
-                    setState(() {
-                      ilaclar.add(Ilac(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        isim: yeniIsim.trim(),
-                        tarih: bugunTarih,
-                        haftaGunu: haftadaBirSecili ? secilenGun : null,
-                        // Haftada bir için sabah saatini varsayılan olarak ayarla
-                        sabahSaati: haftadaBirSecili
-                            ? const TimeOfDay(hour: 8, minute: 0)
-                            : null,
-                        // Checkbox seçimlerine göre hangi zamanlar aktif olacak
-                        sabahAlarmAktif: sabahSecili,
-                        ogleAlarmAktif: ogleSecili,
-                        aksamAlarmAktif: aksamSecili,
-                      ));
-                    });
+                    final yeniIlac = Ilac(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      isim: yeniIsim.trim(),
+                      tarih: bugunTarih,
+                      haftaGunu: haftadaBirSecili ? secilenGun : null,
+                      // ✅ Haftalık ilaç saatini sabahSaati alanında saklıyoruz
+                      sabahSaati: haftadaBirSecili ? haftaIlacSaati : null,
+                      sabahAlarmAktif:
+                          haftadaBirSecili ? haftaAlarmAktif : sabahSecili,
+                      ogleAlarmAktif: haftadaBirSecili ? false : ogleSecili,
+                      aksamAlarmAktif:
+                          haftadaBirSecili ? false : aksamSecili,
+                    );
+
+                    setState(() => ilaclar.add(yeniIlac));
                     _ilaclarKaydet();
+
+                    // ✅ Alarm aktifse hemen bildirim kur
+                    if (haftadaBirSecili && haftaAlarmAktif) {
+                      _bildirimKurHaftaIci(yeniIlac, haftaIlacSaati);
+                    }
+
                     Navigator.pop(context);
                   },
                   child: const Text('Ekle'),
@@ -436,21 +502,23 @@ class _AnaSayfaState extends State<AnaSayfa> {
               _ilaclarKaydet();
               Navigator.pop(context);
             },
-            child: const Text('Sil', style: TextStyle(color: Colors.white)),
+            child:
+                const Text('Sil', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  // ✅ GÜNCELLENDİ: Öğle desteği eklendi
   Future<void> _alarmKur(Ilac ilac, String zaman) async {
     TimeOfDay baslangic;
     String yardimMetni;
 
     if (zaman == 'sabah') {
       baslangic = ilac.sabahSaati ?? const TimeOfDay(hour: 8, minute: 0);
-      yardimMetni = 'Sabah Alarm Saati';
+      yardimMetni = ilac.haftaGunu != null
+          ? 'Haftalık Alarm Saati'
+          : 'Sabah Alarm Saati';
     } else if (zaman == 'ogle') {
       baslangic = ilac.ogleSaati ?? const TimeOfDay(hour: 12, minute: 0);
       yardimMetni = 'Öğle Alarm Saati';
@@ -479,13 +547,20 @@ class _AnaSayfaState extends State<AnaSayfa> {
         }
       });
       _ilaclarKaydet();
-      _bildirimKur(ilac, zaman, secilenSaat);
+
+      // Haftalık ilaç için özel bildirim
+      if (ilac.haftaGunu != null) {
+        _bildirimKurHaftaIci(ilac, secilenSaat);
+      } else {
+        _bildirimKur(ilac, zaman, secilenSaat);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                '${ilac.isim} için $zaman alarmı ${secilenSaat.format(context)} olarak ayarlandı'),
+              '${ilac.isim} için alarm ${secilenSaat.format(context)} olarak ayarlandı',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -493,8 +568,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
     }
   }
 
-  // ✅ GÜNCELLENDİ: Öğle bildirimi desteği eklendi
-  Future<void> _bildirimKur(Ilac ilac, String zaman, TimeOfDay saat) async {
+  Future<void> _bildirimKur(
+      Ilac ilac, String zaman, TimeOfDay saat) async {
     final int base = int.parse(ilac.id.substring(ilac.id.length - 4));
     final int bildirimId = zaman == 'sabah'
         ? base
@@ -547,6 +622,72 @@ class _AnaSayfaState extends State<AnaSayfa> {
     );
   }
 
+  // ✅ YENİ: Haftalık ilaç için haftanın belirli gününe bildirim kur
+  Future<void> _bildirimKurHaftaIci(Ilac ilac, TimeOfDay saat) async {
+    final int base = int.parse(ilac.id.substring(ilac.id.length - 4));
+    final int bildirimId = base + 2000;
+
+    await flutterLocalNotificationsPlugin.cancel(bildirimId);
+
+    if (!ilac.sabahAlarmAktif) return;
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'ilac_kanal',
+      'İlaç Hatırlatıcı',
+      channelDescription: 'İlaç alma zamanı bildirimleri',
+      importance: Importance.max,
+      priority: Priority.high,
+      sound: RawResourceAndroidNotificationSound('notification'),
+    );
+
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    // Haftanın gününü bul
+    const gunSirasi = {
+      'Pazartesi': DateTime.monday,
+      'Salı': DateTime.tuesday,
+      'Çarşamba': DateTime.wednesday,
+      'Perşembe': DateTime.thursday,
+      'Cuma': DateTime.friday,
+      'Cumartesi': DateTime.saturday,
+      'Pazar': DateTime.sunday,
+    };
+
+    final hedefGun = gunSirasi[ilac.haftaGunu] ?? DateTime.monday;
+    final now = DateTime.now();
+
+    // Bu haftanın hedef gününü hesapla
+    int fark = hedefGun - now.weekday;
+    if (fark < 0) fark += 7;
+    if (fark == 0 &&
+        now.hour * 60 + now.minute >= saat.hour * 60 + saat.minute) {
+      fark = 7; // Bu günün saati geçtiyse gelecek haftaya al
+    }
+
+    var scheduledDate = DateTime(
+      now.year,
+      now.month,
+      now.day + fark,
+      saat.hour,
+      saat.minute,
+    );
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      bildirimId,
+      '💊 Haftalık İlaç Zamanı!',
+      '${ilac.isim} alma vakti geldi. (${ilac.haftaGunu})',
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      // ✅ Haftada bir tekrar et
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+    );
+  }
+
   Widget _buildAnaSayfa() {
     return Column(
       children: [
@@ -568,7 +709,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
             children: [
               Text(
                 _bugunGoster(),
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                style:
+                    const TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -599,7 +741,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       const SizedBox(height: 16),
                       const Text(
                         'Henüz ilaç eklenmedi',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                        style:
+                            TextStyle(fontSize: 18, color: Colors.grey),
                       ),
                       const SizedBox(height: 8),
                       const Text(
@@ -628,20 +771,19 @@ class _AnaSayfaState extends State<AnaSayfa> {
       'Cuma', 'Cumartesi', 'Pazar'
     ];
     const aylar = [
-      '', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      '',
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
       'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
     ];
     return '${gunler[now.weekday - 1]}, ${now.day} ${aylar[now.month]} ${now.year}';
   }
 
-  // ✅ GÜNCELLENDİ: Öğle dozu da ilerlemeye dahil edildi
   Widget _buildIlerleme() {
     int toplam = 0;
     int alinan = 0;
 
     for (final ilac in ilaclar) {
       if (ilac.haftaGunu != null) {
-        // Haftada bir ilaç — bugün o gün mü?
         final now = DateTime.now();
         const gunler = [
           'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe',
@@ -654,16 +796,16 @@ class _AnaSayfaState extends State<AnaSayfa> {
         }
       } else {
         if (ilac.sabahAlarmAktif) {
-          toplam += 1;
-          if (ilac.sabahAlindi) alinan += 1;
+          toplam++;
+          if (ilac.sabahAlindi) alinan++;
         }
         if (ilac.ogleAlarmAktif) {
-          toplam += 1;
-          if (ilac.ogleAlindi) alinan += 1;
+          toplam++;
+          if (ilac.ogleAlindi) alinan++;
         }
         if (ilac.aksamAlarmAktif) {
-          toplam += 1;
-          if (ilac.aksamAlindi) alinan += 1;
+          toplam++;
+          if (ilac.aksamAlindi) alinan++;
         }
       }
     }
@@ -683,7 +825,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
           child: LinearProgressIndicator(
             value: oran,
             backgroundColor: Colors.white30,
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            valueColor:
+                const AlwaysStoppedAnimation<Color>(Colors.white),
             minHeight: 8,
           ),
         ),
@@ -691,11 +834,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
     );
   }
 
-  // ✅ GÜNCELLENDİ: Öğle butonu + Haftada bir etiketi eklendi
   Widget _buildIlacKarti(Ilac ilac) {
     final bool haftadaBir = ilac.haftaGunu != null;
 
-    // Haftada bir ilaç — bugün o gün mü kontrol et
     bool bugunAlinabilir = true;
     if (haftadaBir) {
       final now = DateTime.now();
@@ -715,7 +856,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // İlaç adı ve silme butonu
+            // İlaç adı satırı
             Row(
               children: [
                 Icon(Icons.medication,
@@ -730,7 +871,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                         style: const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      // Haftada bir etiketi
                       if (haftadaBir)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
@@ -739,7 +879,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
                           decoration: BoxDecoration(
                             color: Colors.teal.shade50,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.teal.shade200),
+                            border:
+                                Border.all(color: Colors.teal.shade200),
                           ),
                           child: Text(
                             '📅 Haftada Bir — ${ilac.haftaGunu}',
@@ -754,14 +895,15 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon:
+                      const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: () => _ilacSil(ilac),
                 ),
               ],
             ),
             const Divider(),
 
-            // Haftada bir ilaç — bugün değilse bilgi göster
+            // Haftada bir — bugün değil
             if (haftadaBir && !bugunAlinabilir)
               Container(
                 width: double.infinity,
@@ -770,14 +912,42 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  'Bu ilaç ${ilac.haftaGunu} günü alınır.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600),
+                child: Column(
+                  children: [
+                    Text(
+                      'Bu ilaç ${ilac.haftaGunu} günü alınır.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    // ✅ Saat bilgisi göster
+                    if (ilac.sabahSaati != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.access_time,
+                              size: 14, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${ilac.sabahSaati!.hour.toString().padLeft(2, '0')}:${ilac.sabahSaati!.minute.toString().padLeft(2, '0')}',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 13,
+                            ),
+                          ),
+                          if (ilac.sabahAlarmAktif) ...[
+                            const SizedBox(width: 8),
+                            Icon(Icons.alarm_on,
+                                size: 14, color: Colors.teal.shade400),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               )
 
-            // Haftada bir ilaç — bugün alınabilir
+            // Haftada bir — bugün alınabilir
             else if (haftadaBir && bugunAlinabilir)
               _buildDozButon(
                 ilac: ilac,
@@ -790,7 +960,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 renk: Colors.teal,
               )
 
-            // Normal ilaç — sabah / öğle / akşam butonları
+            // Normal ilaç
             else
               Row(
                 children: [
@@ -905,8 +1075,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
             GestureDetector(
               onTap: () => _alarmKur(ilac, zaman),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: alarmAktif ? renk : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(20),
@@ -917,16 +1087,18 @@ class _AnaSayfaState extends State<AnaSayfa> {
                     Icon(
                       alarmAktif ? Icons.alarm_on : Icons.alarm_add,
                       size: 14,
-                      color:
-                          alarmAktif ? Colors.white : Colors.grey.shade600,
+                      color: alarmAktif
+                          ? Colors.white
+                          : Colors.grey.shade600,
                     ),
                     const SizedBox(width: 3),
                     Text(
                       alarmAktif ? 'Alarm Açık' : 'Alarm Ekle',
                       style: TextStyle(
                         fontSize: 11,
-                        color:
-                            alarmAktif ? Colors.white : Colors.grey.shade600,
+                        color: alarmAktif
+                            ? Colors.white
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -965,7 +1137,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   backgroundColor:
                       gun['tamamlandi'] ? Colors.green : Colors.orange,
                   child: Icon(
-                    gun['tamamlandi'] ? Icons.check : Icons.warning_amber,
+                    gun['tamamlandi']
+                        ? Icons.check
+                        : Icons.warning_amber,
                     color: Colors.white,
                   ),
                 ),
@@ -989,8 +1163,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
       final tarih = key.replaceFirst('ilaclar_', '');
       final String? json = prefs.getString(key);
       if (json != null) {
-        final liste =
-            (jsonDecode(json) as List).map((e) => Ilac.fromJson(e)).toList();
+        final liste = (jsonDecode(json) as List)
+            .map((e) => Ilac.fromJson(e))
+            .toList();
         int toplam = 0;
         int alinan = 0;
         for (final ilac in liste) {
