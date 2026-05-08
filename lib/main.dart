@@ -696,7 +696,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
     final bool haftadaBir = ilac.haftaGunu != null;
 
     // Haftada bir ilaç — bugün o gün mü kontrol et
-    bool bugunAlınabilir = true;
+    bool bugunAlinabilir = true;
     if (haftadaBir) {
       final now = DateTime.now();
       const gunler = [
@@ -704,7 +704,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
         'Cuma', 'Cumartesi', 'Pazar'
       ];
       final bugunAdi = gunler[now.weekday - 1];
-      bugunAlınabilir = ilac.haftaGunu == bugunAdi;
+      bugunAlinabilir = ilac.haftaGunu == bugunAdi;
     }
 
     return Card(
@@ -762,7 +762,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
             const Divider(),
 
             // Haftada bir ilaç — bugün değilse bilgi göster
-            if (haftadaBir && !bugunAlınabilir)
+            if (haftadaBir && !bugunAlinabilir)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -778,7 +778,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
               )
 
             // Haftada bir ilaç — bugün alınabilir
-            else if (haftadaBir && bugunAlınabilir)
+            else if (haftadaBir && bugunAlinabilir)
               _buildDozButon(
                 ilac: ilac,
                 zaman: 'sabah',
