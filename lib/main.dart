@@ -44,6 +44,34 @@ class IlacTakipApp extends StatelessWidget {
   }
 }
 
+// ✅ YENİ: Gün bazlı alarm modeli
+class GunAlarm {
+  List<bool> gunler; // 0=Pzt, 1=Sal, 2=Car, 3=Per, 4=Cum, 5=Cmt, 6=Paz
+  TimeOfDay saat;
+  bool aktif;
+
+  GunAlarm({
+    required this.gunler,
+    required this.saat,
+    this.aktif = true,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'gunler': gunler,
+        'saatHour': saat.hour,
+        'saatMinute': saat.minute,
+        'aktif': aktif,
+      };
+
+  factory GunAlarm.fromJson(Map<String, dynamic> json) {
+    return GunAlarm(
+      gunler: List<bool>.from(json['gunler']),
+      saat: TimeOfDay(hour: json['saatHour'], minute: json['saatMinute']),
+      aktif: json['aktif'] ?? true,
+    );
+  }
+}
+
 class Ilac {
   String id;
   String isim;
@@ -59,6 +87,11 @@ class Ilac {
   String tarih;
   String? haftaGunu;
 
+  // ✅ YENİ: Gün bazlı alarm listesi (sabah, öğle, akşam için ayrı ayrı)
+  List<GunAlarm> sabahGunAlarmlar;
+  List<GunAlarm> ogleGunAlarmlar;
+  List<GunAlarm> aksamGunAlarmlar;
+
   Ilac({
     required this.id,
     required this.isim,
@@ -73,7 +106,12 @@ class Ilac {
     this.aksamAlarmAktif = false,
     required this.tarih,
     this.haftaGunu,
-  });
+    List<GunAlarm>? sabahGunAlarmlar,
+    List<GunAlarm>? ogleGunAlarmlar,
+    List<GunAlarm>? aksamGunAlarmlar,
+  })  : sabahGunAlarmlar = sabahGunAlarmlar ?? [],
+        ogleGunAlarmlar = ogleGunAlarmlar ?? [],
+        aksamGunAlarmlar = aksamGunAlarmlar ?? [];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -92,6 +130,12 @@ class Ilac {
         'aksamAlarmAktif': aksamAlarmAktif,
         'tarih': tarih,
         'haftaGunu': haftaGunu,
+        'sabahGunAlarmlar':
+            sabahGunAlarmlar.map((e) => e.toJson()).toList(),
+        'ogleGunAlarmlar':
+            ogleGunAlarmlar.map((e) => e.toJson()).toList(),
+        'aksamGunAlarmlar':
+            aksamGunAlarmlar.map((e) => e.toJson()).toList(),
       };
 
   factory Ilac.fromJson(Map<String, dynamic> json) {
@@ -103,21 +147,39 @@ class Ilac {
       aksamAlindi: json['aksamAlindi'] ?? false,
       sabahSaati: json['sabahSaatSaat'] != null
           ? TimeOfDay(
-              hour: json['sabahSaatSaat'], minute: json['sabahSaatDakika'])
+              hour: json['sabahSaatSaat'],
+              minute: json['sabahSaatDakika'])
           : null,
       ogleSaati: json['ogleSaatSaat'] != null
           ? TimeOfDay(
-              hour: json['ogleSaatSaat'], minute: json['ogleSaatDakika'])
+              hour: json['ogleSaatSaat'],
+              minute: json['ogleSaatDakika'])
           : null,
       aksamSaati: json['aksamSaatSaat'] != null
           ? TimeOfDay(
-              hour: json['aksamSaatSaat'], minute: json['aksamSaatDakika'])
+              hour: json['aksamSaatSaat'],
+              minute: json['aksamSaatDakika'])
           : null,
       sabahAlarmAktif: json['sabahAlarmAktif'] ?? false,
       ogleAlarmAktif: json['ogleAlarmAktif'] ?? false,
       aksamAlarmAktif: json['aksamAlarmAktif'] ?? false,
       tarih: json['tarih'],
       haftaGunu: json['haftaGunu'],
+      sabahGunAlarmlar: json['sabahGunAlarmlar'] != null
+          ? (json['sabahGunAlarmlar'] as List)
+              .map((e) => GunAlarm.fromJson(e))
+              .toList()
+          : [],
+      ogleGunAlarmlar: json['ogleGunAlarmlar'] != null
+          ? (json['ogleGunAlarmlar'] as List)
+              .map((e) => GunAlarm.fromJson(e))
+              .toList()
+          : [],
+      aksamGunAlarmlar: json['aksamGunAlarmlar'] != null
+          ? (json['aksamGunAlarmlar'] as List)
+              .map((e) => GunAlarm.fromJson(e))
+              .toList()
+          : [],
     );
   }
 }
@@ -133,6 +195,14 @@ class _AnaSayfaState extends State<AnaSayfa> {
   List<Ilac> ilaclar = [];
   int _selectedIndex = 0;
   late String bugunTarih;
+
+  static const List<String> _gunIsimleri = [
+    'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'
+  ];
+
+  static const List<String> _gunTamIsimleri = [
+    'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'
+  ];
 
   @override
   void initState() {
@@ -185,6 +255,21 @@ class _AnaSayfaState extends State<AnaSayfa> {
               aksamAlarmAktif: data['aksamAlarmAktif'] ?? false,
               tarih: bugunTarih,
               haftaGunu: data['haftaGunu'],
+              sabahGunAlarmlar: data['sabahGunAlarmlar'] != null
+                  ? (data['sabahGunAlarmlar'] as List)
+                      .map((e) => GunAlarm.fromJson(e))
+                      .toList()
+                  : [],
+              ogleGunAlarmlar: data['ogleGunAlarmlar'] != null
+                  ? (data['ogleGunAlarmlar'] as List)
+                      .map((e) => GunAlarm.fromJson(e))
+                      .toList()
+                  : [],
+              aksamGunAlarmlar: data['aksamGunAlarmlar'] != null
+                  ? (data['aksamGunAlarmlar'] as List)
+                      .map((e) => GunAlarm.fromJson(e))
+                      .toList()
+                  : [],
             );
           }).toList();
         });
@@ -198,22 +283,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
         jsonEncode(ilaclar.map((e) => e.toJson()).toList());
     await prefs.setString('ilaclar_$bugunTarih', ilaclarJson);
 
-    final isimlerJson = jsonEncode(ilaclar
-        .map((e) => {
-              'id': e.id,
-              'isim': e.isim,
-              'sabahSaatSaat': e.sabahSaati?.hour,
-              'sabahSaatDakika': e.sabahSaati?.minute,
-              'ogleSaatSaat': e.ogleSaati?.hour,
-              'ogleSaatDakika': e.ogleSaati?.minute,
-              'aksamSaatSaat': e.aksamSaati?.hour,
-              'aksamSaatDakika': e.aksamSaati?.minute,
-              'sabahAlarmAktif': e.sabahAlarmAktif,
-              'ogleAlarmAktif': e.ogleAlarmAktif,
-              'aksamAlarmAktif': e.aksamAlarmAktif,
-              'haftaGunu': e.haftaGunu,
-            })
-        .toList());
+    final isimlerJson = jsonEncode(ilaclar.map((e) => e.toJson()).toList());
     await prefs.setString('ilac_isimleri', isimlerJson);
   }
 
@@ -224,8 +294,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
     bool aksamSecili = true;
     bool haftadaBirSecili = false;
     String secilenGun = 'Pazartesi';
-
-    // ✅ Haftalık ilaç için saat — dialog içinde seçilecek
     TimeOfDay haftaIlacSaati = const TimeOfDay(hour: 8, minute: 0);
     bool haftaAlarmAktif = false;
 
@@ -241,7 +309,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // İlaç adı
                     TextField(
                       autofocus: true,
                       decoration: const InputDecoration(
@@ -252,23 +319,17 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       onChanged: (value) => yeniIsim = value,
                     ),
                     const SizedBox(height: 16),
-
-                    // Kullanım zamanı başlığı
                     const Text(
                       'Kullanım Zamanı:',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-
-                    // Sabah checkbox
                     CheckboxListTile(
-                      title: const Row(
-                        children: [
-                          Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
-                          SizedBox(width: 8),
-                          Text('Sabah'),
-                        ],
-                      ),
+                      title: const Row(children: [
+                        Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
+                        SizedBox(width: 8),
+                        Text('Sabah'),
+                      ]),
                       value: sabahSecili,
                       onChanged: haftadaBirSecili
                           ? null
@@ -276,16 +337,12 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       controlAffinity: ListTileControlAffinity.leading,
                       dense: true,
                     ),
-
-                    // Öğle checkbox
                     CheckboxListTile(
-                      title: const Row(
-                        children: [
-                          Icon(Icons.light_mode, color: Colors.amber, size: 20),
-                          SizedBox(width: 8),
-                          Text('Öğle'),
-                        ],
-                      ),
+                      title: const Row(children: [
+                        Icon(Icons.light_mode, color: Colors.amber, size: 20),
+                        SizedBox(width: 8),
+                        Text('Öğle'),
+                      ]),
                       value: ogleSecili,
                       onChanged: haftadaBirSecili
                           ? null
@@ -293,17 +350,13 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       controlAffinity: ListTileControlAffinity.leading,
                       dense: true,
                     ),
-
-                    // Akşam checkbox
                     CheckboxListTile(
-                      title: const Row(
-                        children: [
-                          Icon(Icons.nights_stay,
-                              color: Colors.indigo, size: 20),
-                          SizedBox(width: 8),
-                          Text('Akşam'),
-                        ],
-                      ),
+                      title: const Row(children: [
+                        Icon(Icons.nights_stay,
+                            color: Colors.indigo, size: 20),
+                        SizedBox(width: 8),
+                        Text('Akşam'),
+                      ]),
                       value: aksamSecili,
                       onChanged: haftadaBirSecili
                           ? null
@@ -311,19 +364,14 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       controlAffinity: ListTileControlAffinity.leading,
                       dense: true,
                     ),
-
                     const Divider(),
-
-                    // Haftada bir checkbox
                     CheckboxListTile(
-                      title: const Row(
-                        children: [
-                          Icon(Icons.calendar_today,
-                              color: Colors.teal, size: 20),
-                          SizedBox(width: 8),
-                          Text('Haftada Bir'),
-                        ],
-                      ),
+                      title: const Row(children: [
+                        Icon(Icons.calendar_today,
+                            color: Colors.teal, size: 20),
+                        SizedBox(width: 8),
+                        Text('Haftada Bir'),
+                      ]),
                       value: haftadaBirSecili,
                       onChanged: (v) => setDialogState(() {
                         haftadaBirSecili = v!;
@@ -336,12 +384,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       controlAffinity: ListTileControlAffinity.leading,
                       dense: true,
                     ),
-
-                    // ✅ Haftada bir seçiliyse: gün + saat + alarm
                     if (haftadaBirSecili) ...[
                       const SizedBox(height: 8),
-
-                      // Gün seçimi
                       DropdownButtonFormField<String>(
                         value: secilenGun,
                         decoration: const InputDecoration(
@@ -349,15 +393,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.event),
                         ),
-                        items: [
-                          'Pazartesi',
-                          'Salı',
-                          'Çarşamba',
-                          'Perşembe',
-                          'Cuma',
-                          'Cumartesi',
-                          'Pazar',
-                        ]
+                        items: _gunTamIsimleri
                             .map((g) =>
                                 DropdownMenuItem(value: g, child: Text(g)))
                             .toList(),
@@ -365,8 +401,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                             setDialogState(() => secilenGun = v!),
                       ),
                       const SizedBox(height: 12),
-
-                      // ✅ Saat seçimi
                       ListTile(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -391,14 +425,11 @@ class _AnaSayfaState extends State<AnaSayfa> {
                             helpText: 'Haftalık İlaç Saati',
                           );
                           if (secilen != null) {
-                            setDialogState(
-                                () => haftaIlacSaati = secilen);
+                            setDialogState(() => haftaIlacSaati = secilen);
                           }
                         },
                       ),
                       const SizedBox(height: 12),
-
-                      // ✅ Alarm açık/kapalı toggle
                       SwitchListTile(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -408,13 +439,14 @@ class _AnaSayfaState extends State<AnaSayfa> {
                           haftaAlarmAktif
                               ? Icons.alarm_on
                               : Icons.alarm_off,
-                          color:
-                              haftaAlarmAktif ? Colors.teal : Colors.grey,
+                          color: haftaAlarmAktif
+                              ? Colors.teal
+                              : Colors.grey,
                         ),
                         title: const Text('Alarm Kur'),
                         subtitle: Text(
                           haftaAlarmAktif
-                              ? 'Alarm açık — ${secilenGun} günü hatırlatılacak'
+                              ? 'Alarm açık — $secilenGun günü hatırlatılacak'
                               : 'Alarm kapalı',
                         ),
                         value: haftaAlarmAktif,
@@ -453,11 +485,12 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       isim: yeniIsim.trim(),
                       tarih: bugunTarih,
                       haftaGunu: haftadaBirSecili ? secilenGun : null,
-                      // ✅ Haftalık ilaç saatini sabahSaati alanında saklıyoruz
                       sabahSaati: haftadaBirSecili ? haftaIlacSaati : null,
-                      sabahAlarmAktif:
-                          haftadaBirSecili ? haftaAlarmAktif : sabahSecili,
-                      ogleAlarmAktif: haftadaBirSecili ? false : ogleSecili,
+                      sabahAlarmAktif: haftadaBirSecili
+                          ? haftaAlarmAktif
+                          : sabahSecili,
+                      ogleAlarmAktif:
+                          haftadaBirSecili ? false : ogleSecili,
                       aksamAlarmAktif:
                           haftadaBirSecili ? false : aksamSecili,
                     );
@@ -465,7 +498,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                     setState(() => ilaclar.add(yeniIlac));
                     _ilaclarKaydet();
 
-                    // ✅ Alarm aktifse hemen bildirim kur
                     if (haftadaBirSecili && haftaAlarmAktif) {
                       _bildirimKurHaftaIci(yeniIlac, haftaIlacSaati);
                     }
@@ -496,9 +528,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              setState(() {
-                ilaclar.removeWhere((e) => e.id == ilac.id);
-              });
+              setState(() => ilaclar.removeWhere((e) => e.id == ilac.id));
               _ilaclarKaydet();
               Navigator.pop(context);
             },
@@ -510,62 +540,383 @@ class _AnaSayfaState extends State<AnaSayfa> {
     );
   }
 
-  Future<void> _alarmKur(Ilac ilac, String zaman) async {
-    TimeOfDay baslangic;
-    String yardimMetni;
+  // ✅ YENİ: Gün bazlı alarm yönetimi dialog'u
+  Future<void> _gunAlarmYonet(Ilac ilac, String zaman) async {
+    List<GunAlarm> mevcutAlarmlar;
+    Color renk;
+    String baslik;
+    IconData icon;
 
     if (zaman == 'sabah') {
-      baslangic = ilac.sabahSaati ?? const TimeOfDay(hour: 8, minute: 0);
-      yardimMetni = ilac.haftaGunu != null
-          ? 'Haftalık Alarm Saati'
-          : 'Sabah Alarm Saati';
+      mevcutAlarmlar = List.from(ilac.sabahGunAlarmlar);
+      renk = Colors.orange;
+      baslik = 'Sabah Alarmları';
+      icon = Icons.wb_sunny;
     } else if (zaman == 'ogle') {
-      baslangic = ilac.ogleSaati ?? const TimeOfDay(hour: 12, minute: 0);
-      yardimMetni = 'Öğle Alarm Saati';
+      mevcutAlarmlar = List.from(ilac.ogleGunAlarmlar);
+      renk = Colors.amber;
+      baslik = 'Öğle Alarmları';
+      icon = Icons.light_mode;
     } else {
-      baslangic = ilac.aksamSaati ?? const TimeOfDay(hour: 20, minute: 0);
-      yardimMetni = 'Akşam Alarm Saati';
+      mevcutAlarmlar = List.from(ilac.aksamGunAlarmlar);
+      renk = Colors.indigo;
+      baslik = 'Akşam Alarmları';
+      icon = Icons.nights_stay;
     }
 
-    final TimeOfDay? secilenSaat = await showTimePicker(
+    await showDialog(
       context: context,
-      initialTime: baslangic,
-      helpText: yardimMetni,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  Icon(icon, color: renk),
+                  const SizedBox(width: 8),
+                  Text(baslik),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Mevcut alarmlar listesi
+                    if (mevcutAlarmlar.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          'Henüz alarm eklenmedi.\nAşağıdan yeni alarm ekleyin.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey.shade500),
+                        ),
+                      )
+                    else
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 300),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: mevcutAlarmlar.length,
+                          itemBuilder: (context, index) {
+                            final alarm = mevcutAlarmlar[index];
+                            return _buildAlarmSatiri(
+                              alarm: alarm,
+                              renk: renk,
+                              onSil: () => setDialogState(
+                                  () => mevcutAlarmlar.removeAt(index)),
+                              onAktifDegistir: (v) => setDialogState(
+                                  () => alarm.aktif = v),
+                              onSaatDegistir: () async {
+                                final yeniSaat = await showTimePicker(
+                                  context: context,
+                                  initialTime: alarm.saat,
+                                  helpText: 'Alarm Saatini Seç',
+                                );
+                                if (yeniSaat != null) {
+                                  setDialogState(() => alarm.saat = yeniSaat);
+                                }
+                              },
+                              onGunDegistir: (gunIndex) =>
+                                  setDialogState(() => alarm.gunler[gunIndex] =
+                                      !alarm.gunler[gunIndex]),
+                            );
+                          },
+                        ),
+                      ),
+
+                    const Divider(),
+
+                    // Yeni alarm ekle butonu
+                    TextButton.icon(
+                      onPressed: () async {
+                        final yeniSaat = await showTimePicker(
+                          context: context,
+                          initialTime: zaman == 'sabah'
+                              ? const TimeOfDay(hour: 8, minute: 0)
+                              : zaman == 'ogle'
+                                  ? const TimeOfDay(hour: 12, minute: 0)
+                                  : const TimeOfDay(hour: 20, minute: 0),
+                          helpText: 'Yeni Alarm Saati',
+                        );
+                        if (yeniSaat != null) {
+                          setDialogState(() {
+                            mevcutAlarmlar.add(GunAlarm(
+                              // Varsayılan: Pazartesi-Cuma seçili
+                              gunler: [
+                                true, true, true, true, true, false, false
+                              ],
+                              saat: yeniSaat,
+                            ));
+                          });
+                        }
+                      },
+                      icon: Icon(Icons.add_alarm, color: renk),
+                      label: Text('Yeni Alarm Ekle',
+                          style: TextStyle(color: renk)),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('İptal'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: renk),
+                  onPressed: () {
+                    setState(() {
+                      if (zaman == 'sabah') {
+                        ilac.sabahGunAlarmlar = mevcutAlarmlar;
+                        ilac.sabahAlarmAktif = mevcutAlarmlar.isNotEmpty;
+                        // Geriye dönük uyumluluk için ilk alarmın saatini sabahSaati'ne yaz
+                        if (mevcutAlarmlar.isNotEmpty) {
+                          ilac.sabahSaati = mevcutAlarmlar.first.saat;
+                        }
+                      } else if (zaman == 'ogle') {
+                        ilac.ogleGunAlarmlar = mevcutAlarmlar;
+                        ilac.ogleAlarmAktif = mevcutAlarmlar.isNotEmpty;
+                        if (mevcutAlarmlar.isNotEmpty) {
+                          ilac.ogleSaati = mevcutAlarmlar.first.saat;
+                        }
+                      } else {
+                        ilac.aksamGunAlarmlar = mevcutAlarmlar;
+                        ilac.aksamAlarmAktif = mevcutAlarmlar.isNotEmpty;
+                        if (mevcutAlarmlar.isNotEmpty) {
+                          ilac.aksamSaati = mevcutAlarmlar.first.saat;
+                        }
+                      }
+                    });
+                    _ilaclarKaydet();
+                    // Tüm alarmları yeniden kur
+                    _tumAlarmlariKur(ilac, zaman, mevcutAlarmlar);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Kaydet',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
+  }
 
-    if (secilenSaat != null) {
-      setState(() {
-        if (zaman == 'sabah') {
-          ilac.sabahSaati = secilenSaat;
-          ilac.sabahAlarmAktif = true;
-        } else if (zaman == 'ogle') {
-          ilac.ogleSaati = secilenSaat;
-          ilac.ogleAlarmAktif = true;
-        } else {
-          ilac.aksamSaati = secilenSaat;
-          ilac.aksamAlarmAktif = true;
-        }
-      });
-      _ilaclarKaydet();
-
-      // Haftalık ilaç için özel bildirim
-      if (ilac.haftaGunu != null) {
-        _bildirimKurHaftaIci(ilac, secilenSaat);
-      } else {
-        _bildirimKur(ilac, zaman, secilenSaat);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${ilac.isim} için alarm ${secilenSaat.format(context)} olarak ayarlandı',
+  // ✅ YENİ: Tek alarm satırı widget'ı
+  Widget _buildAlarmSatiri({
+    required GunAlarm alarm,
+    required Color renk,
+    required VoidCallback onSil,
+    required Function(bool) onAktifDegistir,
+    required VoidCallback onSaatDegistir,
+    required Function(int) onGunDegistir,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        border: Border.all(
+            color: alarm.aktif ? renk.withOpacity(0.4) : Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+        color: alarm.aktif ? renk.withOpacity(0.05) : Colors.grey.shade50,
+      ),
+      child: Column(
+        children: [
+          // Saat + aktif toggle + sil
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                // Saat butonu
+                GestureDetector(
+                  onTap: onSaatDegistir,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: alarm.aktif ? renk : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.access_time,
+                            color: Colors.white, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${alarm.saat.hour.toString().padLeft(2, '0')}:${alarm.saat.minute.toString().padLeft(2, '0')}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                // Aktif toggle
+                Switch(
+                  value: alarm.aktif,
+                  onChanged: onAktifDegistir,
+                  activeColor: renk,
+                ),
+                // Sil butonu
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.red, size: 20),
+                  onPressed: onSil,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
-            backgroundColor: Colors.green,
           ),
+
+          // Gün seçici
+          Padding(
+            padding:
+                const EdgeInsets.only(left: 8, right: 8, bottom: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(7, (i) {
+                final secili = alarm.gunler[i];
+                return GestureDetector(
+                  onTap: () => onGunDegistir(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: secili
+                          ? (alarm.aktif ? renk : Colors.grey)
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: secili
+                            ? (alarm.aktif ? renk : Colors.grey)
+                            : Colors.grey.shade300,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _gunIsimleri[i],
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: secili ? Colors.white : Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ YENİ: Tüm gün alarmlarını kur
+  Future<void> _tumAlarmlariKur(
+      Ilac ilac, String zaman, List<GunAlarm> alarmlar) async {
+    final int base = int.parse(ilac.id.substring(ilac.id.length - 4));
+
+    // Önce bu zaman için tüm eski bildirimleri iptal et
+    for (int i = 0; i < 20; i++) {
+      final int offset = zaman == 'sabah'
+          ? i
+          : zaman == 'ogle'
+              ? 500 + i
+              : 1000 + i;
+      await flutterLocalNotificationsPlugin.cancel(base + offset);
+    }
+
+    // Her alarm için her seçili gün ayrı bildirim kur
+    for (int alarmIndex = 0;
+        alarmIndex < alarmlar.length;
+        alarmIndex++) {
+      final alarm = alarmlar[alarmIndex];
+      if (!alarm.aktif) continue;
+
+      for (int gunIndex = 0; gunIndex < 7; gunIndex++) {
+        if (!alarm.gunler[gunIndex]) continue;
+
+        final int offset = zaman == 'sabah'
+            ? alarmIndex * 7 + gunIndex
+            : zaman == 'ogle'
+                ? 500 + alarmIndex * 7 + gunIndex
+                : 1000 + alarmIndex * 7 + gunIndex;
+
+        final int bildirimId = base + offset;
+
+        // Dart weekday: 1=Pzt...7=Paz, bizim index: 0=Pzt...6=Paz
+        final int hedefGun = gunIndex + 1;
+
+        await _bildirimKurGunIcin(
+          bildirimId: bildirimId,
+          ilacIsim: ilac.isim,
+          zaman: zaman,
+          saat: alarm.saat,
+          hedefWeekday: hedefGun,
         );
       }
     }
+  }
+
+  Future<void> _bildirimKurGunIcin({
+    required int bildirimId,
+    required String ilacIsim,
+    required String zaman,
+    required TimeOfDay saat,
+    required int hedefWeekday,
+  }) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'ilac_kanal',
+      'İlaç Hatırlatıcı',
+      channelDescription: 'İlaç alma zamanı bildirimleri',
+      importance: Importance.max,
+      priority: Priority.high,
+      sound: RawResourceAndroidNotificationSound('notification'),
+    );
+
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    final now = DateTime.now();
+    int fark = hedefWeekday - now.weekday;
+    if (fark < 0) fark += 7;
+    if (fark == 0 &&
+        now.hour * 60 + now.minute >= saat.hour * 60 + saat.minute) {
+      fark = 7;
+    }
+
+    final scheduledDate = DateTime(
+      now.year, now.month, now.day + fark, saat.hour, saat.minute,
+    );
+
+    final zamanEtiketi = zaman == 'sabah'
+        ? 'Sabah'
+        : zaman == 'ogle'
+            ? 'Öğle'
+            : 'Akşam';
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      bildirimId,
+      '💊 İlaç Zamanı!',
+      '$ilacIsim — $zamanEtiketi dozu alma vakti!',
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+    );
   }
 
   Future<void> _bildirimKur(
@@ -578,14 +929,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
             : base + 1000;
 
     await flutterLocalNotificationsPlugin.cancel(bildirimId);
-
-    bool aktif = zaman == 'sabah'
-        ? ilac.sabahAlarmAktif
-        : zaman == 'ogle'
-            ? ilac.ogleAlarmAktif
-            : ilac.aksamAlarmAktif;
-
-    if (!aktif) return;
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -601,9 +944,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
         NotificationDetails(android: androidDetails);
 
     final now = DateTime.now();
-    var scheduledDate = DateTime(
-      now.year, now.month, now.day, saat.hour, saat.minute,
-    );
+    var scheduledDate =
+        DateTime(now.year, now.month, now.day, saat.hour, saat.minute);
 
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
@@ -622,13 +964,11 @@ class _AnaSayfaState extends State<AnaSayfa> {
     );
   }
 
-  // ✅ YENİ: Haftalık ilaç için haftanın belirli gününe bildirim kur
   Future<void> _bildirimKurHaftaIci(Ilac ilac, TimeOfDay saat) async {
     final int base = int.parse(ilac.id.substring(ilac.id.length - 4));
     final int bildirimId = base + 2000;
 
     await flutterLocalNotificationsPlugin.cancel(bildirimId);
-
     if (!ilac.sabahAlarmAktif) return;
 
     const AndroidNotificationDetails androidDetails =
@@ -644,7 +984,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
     const NotificationDetails details =
         NotificationDetails(android: androidDetails);
 
-    // Haftanın gününü bul
     const gunSirasi = {
       'Pazartesi': DateTime.monday,
       'Salı': DateTime.tuesday,
@@ -658,21 +997,15 @@ class _AnaSayfaState extends State<AnaSayfa> {
     final hedefGun = gunSirasi[ilac.haftaGunu] ?? DateTime.monday;
     final now = DateTime.now();
 
-    // Bu haftanın hedef gününü hesapla
     int fark = hedefGun - now.weekday;
     if (fark < 0) fark += 7;
     if (fark == 0 &&
         now.hour * 60 + now.minute >= saat.hour * 60 + saat.minute) {
-      fark = 7; // Bu günün saati geçtiyse gelecek haftaya al
+      fark = 7;
     }
 
-    var scheduledDate = DateTime(
-      now.year,
-      now.month,
-      now.day + fark,
-      saat.hour,
-      saat.minute,
-    );
+    final scheduledDate = DateTime(
+        now.year, now.month, now.day + fark, saat.hour, saat.minute);
 
     await flutterLocalNotificationsPlugin.zonedSchedule(
       bildirimId,
@@ -683,7 +1016,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      // ✅ Haftada bir tekrar et
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
     );
   }
@@ -707,20 +1039,15 @@ class _AnaSayfaState extends State<AnaSayfa> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _bugunGoster(),
-                style:
-                    const TextStyle(color: Colors.white70, fontSize: 14),
-              ),
+              Text(_bugunGoster(),
+                  style:
+                      const TextStyle(color: Colors.white70, fontSize: 14)),
               const SizedBox(height: 4),
-              const Text(
-                'İlaç Takibim',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const Text('İlaç Takibim',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               _buildIlerleme(),
             ],
@@ -739,25 +1066,20 @@ class _AnaSayfaState extends State<AnaSayfa> {
                               .primary
                               .withOpacity(0.3)),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Henüz ilaç eklenmedi',
-                        style:
-                            TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
+                      const Text('Henüz ilaç eklenmedi',
+                          style:
+                              TextStyle(fontSize: 18, color: Colors.grey)),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Sağ alttaki + butonuna basın',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                      const Text('Sağ alttaki + butonuna basın',
+                          style: TextStyle(color: Colors.grey)),
                     ],
                   ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: ilaclar.length,
-                  itemBuilder: (context, index) {
-                    return _buildIlacKarti(ilaclar[index]);
-                  },
+                  itemBuilder: (context, index) =>
+                      _buildIlacKarti(ilaclar[index]),
                 ),
         ),
       ],
@@ -771,8 +1093,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
       'Cuma', 'Cumartesi', 'Pazar'
     ];
     const aylar = [
-      '',
-      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      '', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
       'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
     ];
     return '${gunler[now.weekday - 1]}, ${now.day} ${aylar[now.month]} ${now.year}';
@@ -784,15 +1105,10 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
     for (final ilac in ilaclar) {
       if (ilac.haftaGunu != null) {
-        final now = DateTime.now();
-        const gunler = [
-          'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe',
-          'Cuma', 'Cumartesi', 'Pazar'
-        ];
-        final bugunAdi = gunler[now.weekday - 1];
+        final bugunAdi = _gunTamIsimleri[DateTime.now().weekday - 1];
         if (ilac.haftaGunu == bugunAdi) {
-          toplam += 1;
-          if (ilac.sabahAlindi) alinan += 1;
+          toplam++;
+          if (ilac.sabahAlindi) alinan++;
         }
       } else {
         if (ilac.sabahAlarmAktif) {
@@ -815,18 +1131,15 @@ class _AnaSayfaState extends State<AnaSayfa> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '$alinan / $toplam doz alındı',
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-        ),
+        Text('$alinan / $toplam doz alındı',
+            style: const TextStyle(color: Colors.white, fontSize: 13)),
         const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: LinearProgressIndicator(
             value: oran,
             backgroundColor: Colors.white30,
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(Colors.white),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             minHeight: 8,
           ),
         ),
@@ -836,15 +1149,10 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   Widget _buildIlacKarti(Ilac ilac) {
     final bool haftadaBir = ilac.haftaGunu != null;
-
     bool bugunAlinabilir = true;
+
     if (haftadaBir) {
-      final now = DateTime.now();
-      const gunler = [
-        'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe',
-        'Cuma', 'Cumartesi', 'Pazar'
-      ];
-      final bugunAdi = gunler[now.weekday - 1];
+      final bugunAdi = _gunTamIsimleri[DateTime.now().weekday - 1];
       bugunAlinabilir = ilac.haftaGunu == bugunAdi;
     }
 
@@ -856,7 +1164,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // İlaç adı satırı
             Row(
               children: [
                 Icon(Icons.medication,
@@ -866,11 +1173,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        ilac.isim,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
+                      Text(ilac.isim,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
                       if (haftadaBir)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
@@ -885,25 +1190,22 @@ class _AnaSayfaState extends State<AnaSayfa> {
                           child: Text(
                             '📅 Haftada Bir — ${ilac.haftaGunu}',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.teal.shade700,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                fontSize: 12,
+                                color: Colors.teal.shade700,
+                                fontWeight: FontWeight.w500),
                           ),
                         ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon:
-                      const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: () => _ilacSil(ilac),
                 ),
               ],
             ),
             const Divider(),
 
-            // Haftada bir — bugün değil
             if (haftadaBir && !bugunAlinabilir)
               Container(
                 width: double.infinity,
@@ -914,12 +1216,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      'Bu ilaç ${ilac.haftaGunu} günü alınır.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                    // ✅ Saat bilgisi göster
+                    Text('Bu ilaç ${ilac.haftaGunu} günü alınır.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey.shade600)),
                     if (ilac.sabahSaati != null) ...[
                       const SizedBox(height: 4),
                       Row(
@@ -931,9 +1230,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                           Text(
                             '${ilac.sabahSaati!.hour.toString().padLeft(2, '0')}:${ilac.sabahSaati!.minute.toString().padLeft(2, '0')}',
                             style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 13,
-                            ),
+                                color: Colors.grey.shade500, fontSize: 13),
                           ),
                           if (ilac.sabahAlarmAktif) ...[
                             const SizedBox(width: 8),
@@ -946,8 +1243,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   ],
                 ),
               )
-
-            // Haftada bir — bugün alınabilir
             else if (haftadaBir && bugunAlinabilir)
               _buildDozButon(
                 ilac: ilac,
@@ -959,8 +1254,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 alarmAktif: ilac.sabahAlarmAktif,
                 renk: Colors.teal,
               )
-
-            // Normal ilaç
             else
               Row(
                 children: [
@@ -1015,6 +1308,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
     );
   }
 
+  // ✅ GÜNCELLENDİ: Alarm butonuna tıklayınca artık gün bazlı alarm dialog'u açılıyor
   Widget _buildDozButon({
     required Ilac ilac,
     required String zaman,
@@ -1025,6 +1319,16 @@ class _AnaSayfaState extends State<AnaSayfa> {
     required bool alarmAktif,
     required Color renk,
   }) {
+    // Kaç alarm var özeti
+    List<GunAlarm> gunAlarmlar = zaman == 'sabah'
+        ? ilac.sabahGunAlarmlar
+        : zaman == 'ogle'
+            ? ilac.ogleGunAlarmlar
+            : ilac.aksamGunAlarmlar;
+
+    final int aktifAlarmSayisi =
+        gunAlarmlar.where((a) => a.aktif).length;
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -1044,36 +1348,33 @@ class _AnaSayfaState extends State<AnaSayfa> {
           color: alindi ? renk.withOpacity(0.15) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: alindi ? renk : Colors.grey.shade300,
-            width: 2,
-          ),
+              color: alindi ? renk : Colors.grey.shade300, width: 2),
         ),
         child: Column(
           children: [
-            Icon(
-              alindi ? Icons.check_circle : icon,
-              color: alindi ? renk : Colors.grey,
-              size: 32,
-            ),
+            Icon(alindi ? Icons.check_circle : icon,
+                color: alindi ? renk : Colors.grey, size: 32),
             const SizedBox(height: 4),
-            Text(
-              etiket,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: alindi ? renk : Colors.grey.shade600,
-              ),
-            ),
+            Text(etiket,
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: alindi ? renk : Colors.grey.shade600)),
             if (saat != null)
               Text(
                 '${saat.hour.toString().padLeft(2, '0')}:${saat.minute.toString().padLeft(2, '0')}',
                 style: TextStyle(
-                  fontSize: 12,
-                  color: alindi ? renk : Colors.grey,
-                ),
+                    fontSize: 12, color: alindi ? renk : Colors.grey),
               ),
             const SizedBox(height: 6),
+
+            // ✅ Alarm butonu — gün bazlı dialog açar
             GestureDetector(
-              onTap: () => _alarmKur(ilac, zaman),
+              onTap: () => ilac.haftaGunu == null
+                  ? _gunAlarmYonet(ilac, zaman)
+                  : _bildirimKurHaftaIci(
+                      ilac,
+                      saat ?? TimeOfDay.now(),
+                    ),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 4),
@@ -1093,7 +1394,11 @@ class _AnaSayfaState extends State<AnaSayfa> {
                     ),
                     const SizedBox(width: 3),
                     Text(
-                      alarmAktif ? 'Alarm Açık' : 'Alarm Ekle',
+                      alarmAktif
+                          ? (aktifAlarmSayisi > 0
+                              ? '$aktifAlarmSayisi alarm'
+                              : 'Alarm Açık')
+                          : 'Alarm Ekle',
                       style: TextStyle(
                         fontSize: 11,
                         color: alarmAktif
@@ -1121,9 +1426,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
         final liste = snapshot.data!;
         if (liste.isEmpty) {
           return const Center(
-            child: Text('Henüz geçmiş kayıt yok',
-                style: TextStyle(color: Colors.grey)),
-          );
+              child: Text('Henüz geçmiş kayıt yok',
+                  style: TextStyle(color: Colors.grey)));
         }
         return ListView.builder(
           padding: const EdgeInsets.all(12),
@@ -1137,9 +1441,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   backgroundColor:
                       gun['tamamlandi'] ? Colors.green : Colors.orange,
                   child: Icon(
-                    gun['tamamlandi']
-                        ? Icons.check
-                        : Icons.warning_amber,
+                    gun['tamamlandi'] ? Icons.check : Icons.warning_amber,
                     color: Colors.white,
                   ),
                 ),
@@ -1163,9 +1465,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
       final tarih = key.replaceFirst('ilaclar_', '');
       final String? json = prefs.getString(key);
       if (json != null) {
-        final liste = (jsonDecode(json) as List)
-            .map((e) => Ilac.fromJson(e))
-            .toList();
+        final liste =
+            (jsonDecode(json) as List).map((e) => Ilac.fromJson(e)).toList();
         int toplam = 0;
         int alinan = 0;
         for (final ilac in liste) {
@@ -1210,9 +1511,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
           : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
-        },
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.today_outlined),
