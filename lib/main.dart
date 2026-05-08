@@ -775,49 +775,52 @@ class _AnaSayfaState extends State<AnaSayfa> {
             ),
           ),
 
-          // Gün seçici
-          Padding(
-            padding:
-                const EdgeInsets.only(left: 8, right: 8, bottom: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(7, (i) {
-                final secili = alarm.gunler[i];
-                return GestureDetector(
-                  onTap: () => onGunDegistir(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: secili
-                          ? (alarm.aktif ? renk : Colors.grey)
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: secili
-                            ? (alarm.aktif ? renk : Colors.grey)
-                            : Colors.grey.shade300,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _gunIsimleri[i],
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: secili ? Colors.white : Colors.grey,
-                        ),
-                      ),
-                    ),
+// Gün seçici
+Padding(
+  padding: const EdgeInsets.only(left: 6, right: 6, bottom: 10),
+  child: LayoutBuilder(
+    builder: (context, constraints) {
+      final double toplamGenislik = constraints.maxWidth;
+      final double daireBoyutu = (toplamGenislik - 6 * 6) / 7;
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(7, (i) {
+          final secili = alarm.gunler[i];
+          return GestureDetector(
+            onTap: () => onGunDegistir(i),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: daireBoyutu,
+              height: daireBoyutu,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: secili
+                    ? (alarm.aktif ? renk : Colors.grey)
+                    : Colors.transparent,
+                border: Border.all(
+                  color: secili
+                      ? (alarm.aktif ? renk : Colors.grey)
+                      : Colors.grey.shade300,
+                  width: 1.5,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  _gunIsimleri[i],
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: secili ? Colors.white : Colors.grey,
                   ),
-                );
-              }),
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
+          );
+        }),
+      );
+    },
+  ),
+),
     );
   }
 
