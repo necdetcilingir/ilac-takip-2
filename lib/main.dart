@@ -44,9 +44,8 @@ class IlacTakipApp extends StatelessWidget {
   }
 }
 
-// ✅ YENİ: Gün bazlı alarm modeli
 class GunAlarm {
-  List<bool> gunler; // 0=Pzt, 1=Sal, 2=Car, 3=Per, 4=Cum, 5=Cmt, 6=Paz
+  List<bool> gunler;
   TimeOfDay saat;
   bool aktif;
 
@@ -86,8 +85,6 @@ class Ilac {
   bool aksamAlarmAktif;
   String tarih;
   String? haftaGunu;
-
-  // ✅ YENİ: Gün bazlı alarm listesi (sabah, öğle, akşam için ayrı ayrı)
   List<GunAlarm> sabahGunAlarmlar;
   List<GunAlarm> ogleGunAlarmlar;
   List<GunAlarm> aksamGunAlarmlar;
@@ -201,7 +198,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
   ];
 
   static const List<String> _gunTamIsimleri = [
-    'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'
+    'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe',
+    'Cuma', 'Cumartesi', 'Pazar'
   ];
 
   @override
@@ -283,7 +281,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
         jsonEncode(ilaclar.map((e) => e.toJson()).toList());
     await prefs.setString('ilaclar_$bugunTarih', ilaclarJson);
 
-    final isimlerJson = jsonEncode(ilaclar.map((e) => e.toJson()).toList());
+    final isimlerJson =
+        jsonEncode(ilaclar.map((e) => e.toJson()).toList());
     await prefs.setString('ilac_isimleri', isimlerJson);
   }
 
@@ -485,7 +484,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       isim: yeniIsim.trim(),
                       tarih: bugunTarih,
                       haftaGunu: haftadaBirSecili ? secilenGun : null,
-                      sabahSaati: haftadaBirSecili ? haftaIlacSaati : null,
+                      sabahSaati:
+                          haftadaBirSecili ? haftaIlacSaati : null,
                       sabahAlarmAktif: haftadaBirSecili
                           ? haftaAlarmAktif
                           : sabahSecili,
@@ -532,15 +532,14 @@ class _AnaSayfaState extends State<AnaSayfa> {
               _ilaclarKaydet();
               Navigator.pop(context);
             },
-            child:
-                const Text('Sil', style: TextStyle(color: Colors.white)),
+            child: const Text('Sil',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  // ✅ YENİ: Gün bazlı alarm yönetimi dialog'u
   Future<void> _gunAlarmYonet(Ilac ilac, String zaman) async {
     List<GunAlarm> mevcutAlarmlar;
     Color renk;
@@ -582,7 +581,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Mevcut alarmlar listesi
                     if (mevcutAlarmlar.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -594,7 +592,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       )
                     else
                       ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 300),
+                        constraints: const BoxConstraints(maxHeight: 320),
                         child: ListView.builder(
                           shrinkWrap: true,
                           itemCount: mevcutAlarmlar.length,
@@ -605,8 +603,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
                               renk: renk,
                               onSil: () => setDialogState(
                                   () => mevcutAlarmlar.removeAt(index)),
-                              onAktifDegistir: (v) => setDialogState(
-                                  () => alarm.aktif = v),
+                              onAktifDegistir: (v) =>
+                                  setDialogState(() => alarm.aktif = v),
                               onSaatDegistir: () async {
                                 final yeniSaat = await showTimePicker(
                                   context: context,
@@ -614,20 +612,19 @@ class _AnaSayfaState extends State<AnaSayfa> {
                                   helpText: 'Alarm Saatini Seç',
                                 );
                                 if (yeniSaat != null) {
-                                  setDialogState(() => alarm.saat = yeniSaat);
+                                  setDialogState(
+                                      () => alarm.saat = yeniSaat);
                                 }
                               },
                               onGunDegistir: (gunIndex) =>
-                                  setDialogState(() => alarm.gunler[gunIndex] =
-                                      !alarm.gunler[gunIndex]),
+                                  setDialogState(() =>
+                                      alarm.gunler[gunIndex] =
+                                          !alarm.gunler[gunIndex]),
                             );
                           },
                         ),
                       ),
-
                     const Divider(),
-
-                    // Yeni alarm ekle butonu
                     TextButton.icon(
                       onPressed: () async {
                         final yeniSaat = await showTimePicker(
@@ -642,7 +639,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                         if (yeniSaat != null) {
                           setDialogState(() {
                             mevcutAlarmlar.add(GunAlarm(
-                              // Varsayılan: Pazartesi-Cuma seçili
                               gunler: [
                                 true, true, true, true, true, false, false
                               ],
@@ -664,13 +660,13 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   child: const Text('İptal'),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: renk),
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: renk),
                   onPressed: () {
                     setState(() {
                       if (zaman == 'sabah') {
                         ilac.sabahGunAlarmlar = mevcutAlarmlar;
                         ilac.sabahAlarmAktif = mevcutAlarmlar.isNotEmpty;
-                        // Geriye dönük uyumluluk için ilk alarmın saatini sabahSaati'ne yaz
                         if (mevcutAlarmlar.isNotEmpty) {
                           ilac.sabahSaati = mevcutAlarmlar.first.saat;
                         }
@@ -689,7 +685,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       }
                     });
                     _ilaclarKaydet();
-                    // Tüm alarmları yeniden kur
                     _tumAlarmlariKur(ilac, zaman, mevcutAlarmlar);
                     Navigator.pop(context);
                   },
@@ -704,7 +699,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
     );
   }
 
-  // ✅ YENİ: Tek alarm satırı widget'ı
+  // ✅ DÜZELTİLDİ: LayoutBuilder ile taşma sorunu giderildi
   Widget _buildAlarmSatiri({
     required GunAlarm alarm,
     required Color renk,
@@ -717,19 +712,23 @@ class _AnaSayfaState extends State<AnaSayfa> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         border: Border.all(
-            color: alarm.aktif ? renk.withOpacity(0.4) : Colors.grey.shade300),
+          color: alarm.aktif
+              ? renk.withOpacity(0.4)
+              : Colors.grey.shade300,
+        ),
         borderRadius: BorderRadius.circular(12),
-        color: alarm.aktif ? renk.withOpacity(0.05) : Colors.grey.shade50,
+        color: alarm.aktif
+            ? renk.withOpacity(0.05)
+            : Colors.grey.shade50,
       ),
       child: Column(
         children: [
-          // Saat + aktif toggle + sil
+          // Saat + toggle + sil satırı
           Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                // Saat butonu
                 GestureDetector(
                   onTap: onSaatDegistir,
                   child: Container(
@@ -741,7 +740,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.access_time,
+                        const Icon(Icons.access_time,
                             color: Colors.white, size: 16),
                         const SizedBox(width: 4),
                         Text(
@@ -757,13 +756,11 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   ),
                 ),
                 const Spacer(),
-                // Aktif toggle
                 Switch(
                   value: alarm.aktif,
                   onChanged: onAktifDegistir,
                   activeColor: renk,
                 ),
-                // Sil butonu
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.red, size: 20),
@@ -775,61 +772,64 @@ class _AnaSayfaState extends State<AnaSayfa> {
             ),
           ),
 
-// Gün seçici
-Padding(
-  padding: const EdgeInsets.only(left: 6, right: 6, bottom: 10),
-  child: LayoutBuilder(
-    builder: (context, constraints) {
-      final double toplamGenislik = constraints.maxWidth;
-      final double daireBoyutu = (toplamGenislik - 6 * 6) / 7;
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(7, (i) {
-          final secili = alarm.gunler[i];
-          return GestureDetector(
-            onTap: () => onGunDegistir(i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: daireBoyutu,
-              height: daireBoyutu,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: secili
-                    ? (alarm.aktif ? renk : Colors.grey)
-                    : Colors.transparent,
-                border: Border.all(
-                  color: secili
-                      ? (alarm.aktif ? renk : Colors.grey)
-                      : Colors.grey.shade300,
-                  width: 1.5,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  _gunIsimleri[i],
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: secili ? Colors.white : Colors.grey,
-                  ),
-                ),
-              ),
+          // ✅ Gün seçici — LayoutBuilder ile taşma önlendi
+          Padding(
+            padding:
+                const EdgeInsets.only(left: 6, right: 6, bottom: 10),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final double toplamGenislik = constraints.maxWidth;
+                final double daireBoyutu =
+                    (toplamGenislik - 6 * 6) / 7;
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(7, (i) {
+                    final secili = alarm.gunler[i];
+                    return GestureDetector(
+                      onTap: () => onGunDegistir(i),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: daireBoyutu,
+                        height: daireBoyutu,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: secili
+                              ? (alarm.aktif ? renk : Colors.grey)
+                              : Colors.transparent,
+                          border: Border.all(
+                            color: secili
+                                ? (alarm.aktif ? renk : Colors.grey)
+                                : Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _gunIsimleri[i],
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  secili ? Colors.white : Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                );
+              },
             ),
-          );
-        }),
-      );
-    },
-  ),
-),
+          ),
+        ],
+      ),
     );
   }
 
-  // ✅ YENİ: Tüm gün alarmlarını kur
   Future<void> _tumAlarmlariKur(
       Ilac ilac, String zaman, List<GunAlarm> alarmlar) async {
     final int base = int.parse(ilac.id.substring(ilac.id.length - 4));
 
-    // Önce bu zaman için tüm eski bildirimleri iptal et
     for (int i = 0; i < 20; i++) {
       final int offset = zaman == 'sabah'
           ? i
@@ -839,7 +839,6 @@ Padding(
       await flutterLocalNotificationsPlugin.cancel(base + offset);
     }
 
-    // Her alarm için her seçili gün ayrı bildirim kur
     for (int alarmIndex = 0;
         alarmIndex < alarmlar.length;
         alarmIndex++) {
@@ -855,17 +854,12 @@ Padding(
                 ? 500 + alarmIndex * 7 + gunIndex
                 : 1000 + alarmIndex * 7 + gunIndex;
 
-        final int bildirimId = base + offset;
-
-        // Dart weekday: 1=Pzt...7=Paz, bizim index: 0=Pzt...6=Paz
-        final int hedefGun = gunIndex + 1;
-
         await _bildirimKurGunIcin(
-          bildirimId: bildirimId,
+          bildirimId: base + offset,
           ilacIsim: ilac.isim,
           zaman: zaman,
           saat: alarm.saat,
-          hedefWeekday: hedefGun,
+          hedefWeekday: gunIndex + 1,
         );
       }
     }
@@ -919,51 +913,6 @@ Padding(
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-    );
-  }
-
-  Future<void> _bildirimKur(
-      Ilac ilac, String zaman, TimeOfDay saat) async {
-    final int base = int.parse(ilac.id.substring(ilac.id.length - 4));
-    final int bildirimId = zaman == 'sabah'
-        ? base
-        : zaman == 'ogle'
-            ? base + 500
-            : base + 1000;
-
-    await flutterLocalNotificationsPlugin.cancel(bildirimId);
-
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      'ilac_kanal',
-      'İlaç Hatırlatıcı',
-      channelDescription: 'İlaç alma zamanı bildirimleri',
-      importance: Importance.max,
-      priority: Priority.high,
-      sound: RawResourceAndroidNotificationSound('notification'),
-    );
-
-    const NotificationDetails details =
-        NotificationDetails(android: androidDetails);
-
-    final now = DateTime.now();
-    var scheduledDate =
-        DateTime(now.year, now.month, now.day, saat.hour, saat.minute);
-
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      bildirimId,
-      '💊 İlaç Zamanı!',
-      '${ilac.isim} alma vakti geldi.',
-      tz.TZDateTime.from(scheduledDate, tz.local),
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
@@ -1043,8 +992,8 @@ Padding(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(_bugunGoster(),
-                  style:
-                      const TextStyle(color: Colors.white70, fontSize: 14)),
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 14)),
               const SizedBox(height: 4),
               const Text('İlaç Takibim',
                   style: TextStyle(
@@ -1070,8 +1019,8 @@ Padding(
                               .withOpacity(0.3)),
                       const SizedBox(height: 16),
                       const Text('Henüz ilaç eklenmedi',
-                          style:
-                              TextStyle(fontSize: 18, color: Colors.grey)),
+                          style: TextStyle(
+                              fontSize: 18, color: Colors.grey)),
                       const SizedBox(height: 8),
                       const Text('Sağ alttaki + butonuna basın',
                           style: TextStyle(color: Colors.grey)),
@@ -1135,14 +1084,16 @@ Padding(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('$alinan / $toplam doz alındı',
-            style: const TextStyle(color: Colors.white, fontSize: 13)),
+            style:
+                const TextStyle(color: Colors.white, fontSize: 13)),
         const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: LinearProgressIndicator(
             value: oran,
             backgroundColor: Colors.white30,
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            valueColor:
+                const AlwaysStoppedAnimation<Color>(Colors.white),
             minHeight: 8,
           ),
         ),
@@ -1178,7 +1129,8 @@ Padding(
                     children: [
                       Text(ilac.isim,
                           style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold)),
                       if (haftadaBir)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
@@ -1187,8 +1139,8 @@ Padding(
                           decoration: BoxDecoration(
                             color: Colors.teal.shade50,
                             borderRadius: BorderRadius.circular(12),
-                            border:
-                                Border.all(color: Colors.teal.shade200),
+                            border: Border.all(
+                                color: Colors.teal.shade200),
                           ),
                           child: Text(
                             '📅 Haftada Bir — ${ilac.haftaGunu}',
@@ -1202,13 +1154,13 @@ Padding(
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.red),
                   onPressed: () => _ilacSil(ilac),
                 ),
               ],
             ),
             const Divider(),
-
             if (haftadaBir && !bugunAlinabilir)
               Container(
                 width: double.infinity,
@@ -1221,7 +1173,8 @@ Padding(
                   children: [
                     Text('Bu ilaç ${ilac.haftaGunu} günü alınır.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey.shade600)),
+                        style:
+                            TextStyle(color: Colors.grey.shade600)),
                     if (ilac.sabahSaati != null) ...[
                       const SizedBox(height: 4),
                       Row(
@@ -1233,12 +1186,14 @@ Padding(
                           Text(
                             '${ilac.sabahSaati!.hour.toString().padLeft(2, '0')}:${ilac.sabahSaati!.minute.toString().padLeft(2, '0')}',
                             style: TextStyle(
-                                color: Colors.grey.shade500, fontSize: 13),
+                                color: Colors.grey.shade500,
+                                fontSize: 13),
                           ),
                           if (ilac.sabahAlarmAktif) ...[
                             const SizedBox(width: 8),
                             Icon(Icons.alarm_on,
-                                size: 14, color: Colors.teal.shade400),
+                                size: 14,
+                                color: Colors.teal.shade400),
                           ],
                         ],
                       ),
@@ -1311,7 +1266,6 @@ Padding(
     );
   }
 
-  // ✅ GÜNCELLENDİ: Alarm butonuna tıklayınca artık gün bazlı alarm dialog'u açılıyor
   Widget _buildDozButon({
     required Ilac ilac,
     required String zaman,
@@ -1322,8 +1276,7 @@ Padding(
     required bool alarmAktif,
     required Color renk,
   }) {
-    // Kaç alarm var özeti
-    List<GunAlarm> gunAlarmlar = zaman == 'sabah'
+    final List<GunAlarm> gunAlarmlar = zaman == 'sabah'
         ? ilac.sabahGunAlarmlar
         : zaman == 'ogle'
             ? ilac.ogleGunAlarmlar
@@ -1348,7 +1301,8 @@ Padding(
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: alindi ? renk.withOpacity(0.15) : Colors.grey.shade100,
+          color:
+              alindi ? renk.withOpacity(0.15) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
               color: alindi ? renk : Colors.grey.shade300, width: 2),
@@ -1366,18 +1320,15 @@ Padding(
               Text(
                 '${saat.hour.toString().padLeft(2, '0')}:${saat.minute.toString().padLeft(2, '0')}',
                 style: TextStyle(
-                    fontSize: 12, color: alindi ? renk : Colors.grey),
+                    fontSize: 12,
+                    color: alindi ? renk : Colors.grey),
               ),
             const SizedBox(height: 6),
-
-            // ✅ Alarm butonu — gün bazlı dialog açar
             GestureDetector(
               onTap: () => ilac.haftaGunu == null
                   ? _gunAlarmYonet(ilac, zaman)
                   : _bildirimKurHaftaIci(
-                      ilac,
-                      saat ?? TimeOfDay.now(),
-                    ),
+                      ilac, saat ?? TimeOfDay.now()),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 4),
@@ -1444,7 +1395,9 @@ Padding(
                   backgroundColor:
                       gun['tamamlandi'] ? Colors.green : Colors.orange,
                   child: Icon(
-                    gun['tamamlandi'] ? Icons.check : Icons.warning_amber,
+                    gun['tamamlandi']
+                        ? Icons.check
+                        : Icons.warning_amber,
                     color: Colors.white,
                   ),
                 ),
@@ -1461,15 +1414,17 @@ Padding(
   Future<List<Map<String, dynamic>>> _gecmisYukle() async {
     final prefs = await SharedPreferences.getInstance();
     final List<Map<String, dynamic>> sonuc = [];
-    final keys = prefs.getKeys().where((k) => k.startsWith('ilaclar_'));
+    final keys =
+        prefs.getKeys().where((k) => k.startsWith('ilaclar_'));
 
     final sortedKeys = keys.toList()..sort();
     for (final key in sortedKeys.reversed.take(30)) {
       final tarih = key.replaceFirst('ilaclar_', '');
       final String? json = prefs.getString(key);
       if (json != null) {
-        final liste =
-            (jsonDecode(json) as List).map((e) => Ilac.fromJson(e)).toList();
+        final liste = (jsonDecode(json) as List)
+            .map((e) => Ilac.fromJson(e))
+            .toList();
         int toplam = 0;
         int alinan = 0;
         for (final ilac in liste) {
@@ -1504,7 +1459,8 @@ Padding(
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
-      body: _selectedIndex == 0 ? _buildAnaSayfa() : _buildGecmisSayfa(),
+      body:
+          _selectedIndex == 0 ? _buildAnaSayfa() : _buildGecmisSayfa(),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
               onPressed: _ilacEkle,
